@@ -48,7 +48,7 @@
     </nav>
 
     <div class="container mx-auto mt-4 max-w-6xl px-4 pb-10">
-        <div id="loading-area" class="text-center py-20 italic text-gray-500">Načítám data...</div>
+        <div id="loading-area" class="text-center py-20 italic text-gray-500">Načítám data z Google API...</div>
         
         <div id="home" class="section">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -81,70 +81,66 @@
     </div>
 
     <script>
-        const CONFIG = {
-            výkony: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR2ONWjnj6J-bovHnBQefm_N-XhKXxB6GsB3oN-JF7m9jTICOyvWSCtf_ZEdD-b_OvTpJ3FXhLyN8kw/pub?gid=989842385&single=true&output=csv",
-            zápasy: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR2ONWjnj6J-bovHnBQefm_N-XhKXxB6GsB3oN-JF7m9jTICOyvWSCtf_ZEdD-b_OvTpJ3FXhLyN8kw/pub?gid=1243615482&single=true&output=csv"
-        };
-        const PROXY = "https://corsproxy.io/?";
+        // SEM VLOŽ SVŮJ ODKAZ Z APPS SCRIPTU
+        const API_URL = "https://script.google.com/macros/s/AKfycbzyiLNANX9gEQaguLJ7ReF28gzzoOEkTCeGZTbrNCTl3h0gmZgbCSjLHWik8D2Gc94kyA/exec";
+
         let db = { matches: [], stats: [] };
         let currentSort = 'leetify';
 
         function getDecimal(val) {
-            if (!val) return 0;
+            if (val === undefined || val === null) return 0;
             let s = val.toString().replace(/"/g, '').replace(',', '.').trim();
             return parseFloat(s) || 0;
         }
-        const parseID = (val) => val ? Math.floor(getDecimal(val)) : null;
 
         function getLeetifyColor(n) { return n <= -2 ? 'l-red' : (n <= -0.5 ? 'l-orange' : (n < 1 ? 'l-white' : 'l-green')); }
         function getHLTVColor(n) { return n <= 0.94 ? 'h-red' : (n <= 1.04 ? 'h-orange' : 'h-green'); }
-        function getKDColor(n) { 
-            if (n <= 0.90) return 'kd-red';
-            if (n <= 1.04) return 'kd-orange';
-            return 'kd-green';
-        }
+        function getKDColor(n) { return n <= 0.90 ? 'kd-red' : (n <= 1.04 ? 'kd-orange' : 'kd-green'); }
 
         async function init() {
             try {
-                const [resM, resS] = await Promise.all([
-                    fetch(PROXY + encodeURIComponent(CONFIG.zápasy + "&cb=" + Date.now())),
-                    fetch(PROXY + encodeURIComponent(CONFIG.výkony + "&cb=" + Date.now()))
-                ]);
-                db.matches = (await resM.text()).split('\n').map(r => r.split(',')).filter(r => r.length > 5 && !isNaN(parseInt(r[0])));
-                db.stats = (await resS.text()).split('\n').map(r => r.split(',')).filter(r => r.length > 5 && parseID(r[0]) !== null);
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                
+                // Apps Script vrací pole polí, odfiltrujeme hlavičky
+                db.matches = data.zapasy.filter(r => !isNaN(parseInt(r[0])));
+                db.stats = data.vykony.filter(r => !isNaN(parseInt(r[0])));
+                
                 document.getElementById('loading-area').style.display = 'none';
                 renderHome();
                 renderMatches();
                 updateRanking('leetify');
                 showSection('home');
-            } catch (err) { document.getElementById('loading-area').innerText = "Chyba dat."; }
+            } catch (err) { 
+                document.getElementById('loading-area').innerText = "Chyba dat. Zkontroluj URL v Apps Scriptu."; 
+            }
         }
 
         function renderHome() {
             const last3 = db.matches.slice(-3).reverse();
             document.getElementById('home-last-matches').innerHTML = last3.map(z => {
                 const win = parseInt(z[5]) > parseInt(z[6]);
-                return `<div onclick="showMatchDetail('${parseID(z[0])}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d] text-xs font-bold uppercase">
+                return `<div onclick="showMatchDetail('${z[0]}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d] text-xs font-bold uppercase">
                     <span class="w-1/4 text-gray-500 italic font-normal">${z[1]}</span>
                     <span class="w-2/4 text-center"><span class="${win ? 'text-win' : 'text-loss'}">${z[3]}</span> <span class="mx-2 text-white">${z[5]}:${z[6]}</span> <span class="${!win ? 'text-win' : 'text-loss'}">${z[4]}</span></span>
                     <span class="w-1/4 text-right text-gray-600 font-normal italic">${z[2]}</span>
                 </div>`;
             }).join('');
 
-            const players = [...new Set(db.stats.map(s => s[2]?.trim()))].filter(n => n && n !== "Jméno hráče");
+            const players = [...new Set(db.stats.map(s => s[2]?.toString().trim()))].filter(n => n && n !== "Jméno hráče");
             const winrates = players.map(name => {
-                const ps = db.stats.filter(s => s[2]?.trim() === name);
+                const ps = db.stats.filter(s => s[2]?.toString().trim() === name);
                 let wins = 0;
                 ps.forEach(s => {
-                    const m = db.matches.find(mx => parseID(mx[0]) === parseID(s[0]));
+                    const m = db.matches.find(mx => mx[0] == s[0]);
                     if (m) {
-                        const isTeamA = s[1]?.trim() === "Tým A";
+                        const isTeamA = s[1]?.toString().trim() === "Tým A";
                         if ((isTeamA && parseInt(m[5]) > parseInt(m[6])) || (!isTeamA && parseInt(m[6]) > parseInt(m[5]))) wins++;
                     }
                 });
                 return { name, wr: (wins / ps.length) * 100, count: ps.length };
             })
-            .filter(p => p.count >= 3) // TADY JE TA PODMÍNKA NA MINIMÁLNÍ POČET ZÁPASŮ
+            .filter(p => p.count >= 3)
             .sort((a, b) => b.wr - a.wr).slice(0, 3);
 
             document.getElementById('home-top-winrate').innerHTML = winrates.length > 0 ? winrates.map((p, i) => `
@@ -152,26 +148,23 @@
                     <span class="italic uppercase font-black ${i===0?'rank-1-name':(i===1?'rank-2-name':'rank-3-name')}">${i+1}. ${p.name}</span>
                     <span class="text-win font-black italic">${p.wr.toFixed(0)}% <span class="text-[10px] text-gray-600 font-normal">(${p.count} záp.)</span></span>
                 </div>
-            `).join('') : '<div class="text-gray-600 italic text-sm py-4">Zatím nikdo nemá odehrané 3 zápasy.</div>';
+            `).join('') : '<div class="text-gray-600 italic text-sm py-4 text-left">Zatím nikdo nemá odehrané 3 zápasy.</div>';
         }
 
         function handleSearch() {
             const query = document.getElementById('search-input').value.toLowerCase();
-            const activeSection = document.querySelector('.section.active').id;
-            if ((activeSection === 'home' || activeSection === 'match-detail' || activeSection === 'player-profile') && query.length > 0) showSection('ranking');
             renderMatches(query);
             updateRanking(currentSort, query);
         }
 
         function renderMatches(query = "") {
             const filtered = db.matches.filter(z => {
-                const matchId = parseID(z[0]);
-                const playersInMatch = db.stats.filter(s => parseID(s[0]) === matchId).map(s => s[2].toLowerCase());
-                return z[3].toLowerCase().includes(query) || z[4].toLowerCase().includes(query) || z[2].toLowerCase().includes(query) || playersInMatch.some(p => p.includes(query));
+                const playersInMatch = db.stats.filter(s => s[0] == z[0]).map(s => s[2].toString().toLowerCase());
+                return z[3].toString().toLowerCase().includes(query) || z[4].toString().toLowerCase().includes(query) || z[2].toString().toLowerCase().includes(query) || playersInMatch.some(p => p.includes(query));
             });
             document.getElementById('matches-list').innerHTML = filtered.slice().reverse().map(z => {
                 const win = parseInt(z[5]) > parseInt(z[6]);
-                return `<div onclick="showMatchDetail('${parseID(z[0])}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d]">
+                return `<div onclick="showMatchDetail('${z[0]}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d]">
                     <span class="w-1/4 text-gray-500 text-[10px] font-bold italic">${z[1]}</span>
                     <span class="w-2/4 text-center text-white font-black italic uppercase"><span class="${win ? 'text-win' : 'text-loss'}">${z[3]}</span> <span class="mx-2 text-xl text-white">${z[5]}:${z[6]}</span> <span class="${!win ? 'text-win' : 'text-loss'}">${z[4]}</span></span>
                     <span class="w-1/4 text-right text-gray-600 text-[10px] uppercase font-bold tracking-widest">${z[2]}</span>
@@ -183,13 +176,20 @@
             currentSort = sortBy;
             document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
             if(document.getElementById(`btn-${sortBy}`)) document.getElementById(`btn-${sortBy}`).classList.add('active');
-            const players = [...new Set(db.stats.map(s => s[2]?.trim()))].filter(n => n && n !== "Jméno hráče");
+            
+            const players = [...new Set(db.stats.map(s => s[2]?.toString().trim()))].filter(n => n && n !== "Jméno hráče");
             const data = players.map(name => {
-                const ps = db.stats.filter(s => s[2]?.trim() === name);
+                const ps = db.stats.filter(s => s[2]?.toString().trim() === name);
                 const k = ps.reduce((a, b) => a + getDecimal(b[3]), 0);
                 const d = ps.reduce((a, b) => a + getDecimal(b[4]), 0);
-                return { name, leetify: ps.reduce((a, b) => a + getDecimal(b[7]), 0) / ps.length, hltv: ps.reduce((a, b) => a + getDecimal(b[6]), 0) / ps.length, kd: d === 0 ? k : k / d };
+                return { 
+                    name, 
+                    leetify: ps.reduce((a, b) => a + getDecimal(b[7]), 0) / ps.length, 
+                    hltv: ps.reduce((a, b) => a + getDecimal(b[6]), 0) / ps.length, 
+                    kd: d === 0 ? k : k / d 
+                };
             }).filter(p => p.name.toLowerCase().includes(query)).sort((a, b) => b[sortBy] - a[sortBy]);
+
             document.getElementById('ranking-table').innerHTML = data.map((p, i) => {
                 const pos = i + 1;
                 const mCl = pos === 1 ? 'rank-1-name' : (pos === 2 ? 'rank-2-name' : (pos === 3 ? 'rank-3-name' : 'text-white'));
@@ -202,13 +202,13 @@
         }
 
         function showPlayerProfile(name) {
-            const ps = db.stats.filter(s => s[2]?.trim() === name);
+            const ps = db.stats.filter(s => s[2]?.toString().trim() === name);
             const k = ps.reduce((a, b) => a + getDecimal(b[3]), 0), d = ps.reduce((a, b) => a + getDecimal(b[4]), 0);
             const adr = ps.reduce((a, b) => a + getDecimal(b[5]), 0) / ps.length, hltv = ps.reduce((a, b) => a + getDecimal(b[6]), 0) / ps.length, leetify = ps.reduce((a, b) => a + getDecimal(b[7]), 0) / ps.length;
             let wins = 0;
             ps.forEach(s => {
-                const m = db.matches.find(mx => parseID(mx[0]) === parseID(s[0]));
-                if (m && ((s[1]?.trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5])))) wins++;
+                const m = db.matches.find(mx => mx[0] == s[0]);
+                if (m && ((s[1]?.toString().trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.toString().trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5])))) wins++;
             });
             document.getElementById('profile-content').innerHTML = `
                 <button onclick="showSection('ranking')" class="text-gray-500 text-[10px] mb-6 uppercase font-bold hover:text-white transition tracking-widest">← Zpět</button>
@@ -222,19 +222,19 @@
                     <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">Leetify</div><div class="text-3xl font-black italic ${getLeetifyColor(leetify)}">${leetify.toFixed(2)}</div></div>
                 </div>
                 <div class="space-y-1">${ps.slice().reverse().map(s => {
-                    const m = db.matches.find(mx => parseID(mx[0]) === parseID(s[0]));
+                    const m = db.matches.find(mx => mx[0] == s[0]);
                     if(!m) return '';
-                    const win = (s[1]?.trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5]));
+                    const win = (s[1]?.toString().trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.toString().trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5]));
                     return `<div class="card p-3 flex justify-between items-center text-xs"><span class="w-1/5 text-gray-600 font-mono">${m[1]}</span><span class="w-1/5 font-black italic ${win ? 'text-win' : 'text-loss'}">${win ? 'VÝHRA' : 'PROHRA'}</span><span class="w-1/5 text-center text-gray-400">K/D: <span class="text-white">${s[3]}/${s[4]}</span></span><span class="w-1/5 text-right ${getLeetifyColor(getDecimal(s[7]))}">LEETIFY: ${s[7]}</span><span class="w-1/5 text-right ${getHLTVColor(getDecimal(s[6]))}">HLTV: ${s[6]}</span></div>`;
                 }).join('')}</div>`;
             showSection('player-profile');
         }
 
         function showMatchDetail(id) {
-            const m = db.matches.find(x => parseID(x[0]) == parseID(id));
-            const stats = db.stats.filter(s => parseID(s[0]) == parseID(id));
+            const m = db.matches.find(x => x[0] == id);
+            const stats = db.stats.filter(s => s[0] == id);
             const table = (name, cl, tag) => {
-                const p = stats.filter(s => s[1]?.trim() === tag);
+                const p = stats.filter(s => s[1]?.toString().trim() === tag);
                 return `<div class="mb-8 w-full"><h3 class="${cl} font-black uppercase text-sm border-b border-gray-800 pb-2 mb-2 italic">${name}</h3><table class="w-full text-center text-xs">
                     <tr class="text-[9px] text-gray-500 uppercase"><th class="text-left py-2">Hráč</th><th>K/D</th><th>ADR</th><th>Leetify</th><th class="text-right">HLTV</th></tr>
                     ${p.map(s => `<tr class="border-b border-gray-800/20 hover:bg-white/5 cursor-pointer" onclick="showPlayerProfile('${s[2]}')"><td class="text-left font-bold py-3 uppercase">${s[2]}</td><td>${s[3]}/${s[4]}</td><td>${s[5]}</td><td class="${getLeetifyColor(getDecimal(s[7]))}">${s[7]}</td><td class="text-right font-black ${getHLTVColor(getDecimal(s[6]))}">${s[6]}</td></tr>`).join('')}
@@ -257,3 +257,5 @@
         }
         init();
     </script></body></html>
+    </script></body></html>
+
