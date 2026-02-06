@@ -1,14 +1,15 @@
 <!DOCTYPE html><html lang="cs"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS2 Stats Hub | Home</title>
+    <title>CS2 Stats Hub | Peak Unemployment</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #12161c; color: #e1e1e1; font-family: sans-serif; }
         .hltv-orange { color: #f8931d; }
         .text-win { color: #5fb336 !important; } 
         .text-loss { color: #e54c4c !important; }
-        .card { background-color: #1b1f23; border-bottom: 2px solid #2d323a; margin-bottom: 2px; }
+        .card { background-color: #1b1f23; border-bottom: 2px solid #2d323a; margin-bottom: 2px; transition: 0.1s; }
+        .card-hover:hover { background-color: #24292e; cursor: pointer; border-bottom-color: #f8931d; }
         .section { display: none; padding: 20px; }
         .section.active { display: block; }
         
@@ -17,7 +18,8 @@
         .l-green, .h-green, .kd-green { color: #5fb336 !important; }
         .l-white { color: #ffffff !important; }
 
-        .sort-btn { background: #1b1f23; border: 1px solid #2d323a; padding: 8px 16px; font-size: 10px; font-weight: bold; text-transform: uppercase; cursor: pointer; color: #666; }
+        .sort-btn { background: #1b1f23; border: 1px solid #2d323a; padding: 8px 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; cursor: pointer; color: #666; transition: 0.2s; }
+        .sort-btn:hover { color: #aaa; }
         .sort-btn.active { border-color: #f8931d; color: #f8931d; background: rgba(248, 147, 29, 0.1); }
 
         .nav-item { color: #888; transition: 0.2s; border-bottom: 2px solid transparent; }
@@ -35,57 +37,70 @@
         <div class="container mx-auto flex items-center justify-between px-4">
             <div class="flex items-center gap-6">
                 <h1 class="text-xl font-black hltv-orange py-4 cursor-pointer" onclick="showSection('home')">CS2<span class="text-white">STATS</span></h1>
-                <div class="flex h-full text-white">
-                    <div id="nav-home" class="nav-item p-4 cursor-pointer font-bold uppercase text-xs flex items-center" onclick="showSection('home')">Home</div>
-                    <div id="nav-matches" class="nav-item p-4 cursor-pointer font-bold uppercase text-xs flex items-center" onclick="showSection('matches')">Zápasy</div>
-                    <div id="nav-ranking" class="nav-item p-4 cursor-pointer font-bold uppercase text-xs flex items-center" onclick="showSection('ranking')">Žebříček</div>
+                <div class="flex h-full text-white text-[11px] font-bold uppercase tracking-wider">
+                    <div id="nav-home" class="nav-item p-4 cursor-pointer flex items-center" onclick="showSection('home')">Home</div>
+                    <div id="nav-matches" class="nav-item p-4 cursor-pointer flex items-center" onclick="showSection('matches')">Zápasy</div>
+                    <div id="nav-ranking" class="nav-item p-4 cursor-pointer flex items-center" onclick="showSection('ranking')">Žebříček</div>
                 </div>
             </div>
             <div class="hidden sm:block">
-                <input type="text" id="search-input" placeholder="HLEDAT..." onkeyup="handleSearch()">
+                <input type="text" id="search-input" placeholder="HLEDAT HRÁČE NEBO MAPU..." onkeyup="handleSearch()">
             </div>
         </div>
     </nav>
 
     <div class="container mx-auto mt-4 max-w-6xl px-4 pb-10">
-        <div id="loading-area" class="text-center py-20 italic text-gray-500">Načítám data z Google API...</div>
+        <div id="loading-area" class="text-center py-20 italic text-gray-500">Připojování k databázi...</div>
         
         <div id="home" class="section">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div class="stat-card md:col-span-2">
-                    <h3 class="text-xs font-bold uppercase text-gray-500 mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">Top 3 Winrate Players (min. 3 zápasy)</h3>
+                    <h3 class="text-[10px] font-bold uppercase text-gray-500 mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">Top 3 Winrate Players (min. 3 zápasy)</h3>
                     <div id="home-top-winrate" class="space-y-2"></div>
                 </div>
                 <div class="stat-card border-[#f8931d]/30 bg-[#1b1f23]">
-                    <h3 class="text-xs font-bold uppercase hltv-orange mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">News</h3>
+                    <h3 class="text-[10px] font-bold uppercase hltv-orange mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">Status</h3>
                     <p class="text-sm italic text-gray-400 text-left">tato stránka je peak unemployment</p>
                 </div>
             </div>
             <div>
-                <h3 class="text-xs font-bold uppercase text-gray-500 mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">Last 3 Matches</h3>
+                <h3 class="text-[10px] font-bold uppercase text-gray-500 mb-4 tracking-widest text-left border-b border-gray-800 pb-2 italic">Last 3 Matches</h3>
                 <div id="home-last-matches" class="space-y-1"></div>
             </div>
         </div>
 
         <div id="matches" class="section"><div id="matches-list" class="space-y-1 font-bold uppercase text-sm"></div></div>
         <div id="match-detail" class="section"><div id="match-detail-content"></div></div>
+
         <div id="ranking" class="section text-white">
-            <div class="flex gap-2 mb-6 justify-center">
+            <div class="flex flex-wrap gap-2 mb-6 justify-center">
                 <button onclick="updateRanking('leetify')" id="btn-leetify" class="sort-btn active">Leetify</button>
-                <button onclick="updateRanking('hltv')" id="btn-hltv" class="sort-btn">HLTV Rating</button>
-                <button onclick="updateRanking('kd')" id="btn-kd" class="sort-btn">K/D Ratio</button>
+                <button onclick="updateRanking('hltv')" id="btn-hltv" class="sort-btn">HLTV</button>
+                <button onclick="updateRanking('adr')" id="btn-adr" class="sort-btn">ADR</button>
+                <button onclick="updateRanking('winrate')" id="btn-winrate" class="sort-btn">Winrate</button>
+                <button onclick="updateRanking('kd')" id="btn-kd" class="sort-btn">K/D</button>
             </div>
-            <div id="ranking-table" class="bg-[#1b1f23] border border-gray-800 rounded-sm"></div>
+            <div id="ranking-table" class="bg-[#1b1f23] border border-gray-800 rounded-sm shadow-xl"></div>
         </div>
+
         <div id="player-profile" class="section text-white"><div id="profile-content"></div></div>
     </div>
 
     <script>
-        // SEM VLOŽ SVŮJ ODKAZ Z APPS SCRIPTU
         const API_URL = "https://script.google.com/macros/s/AKfycbzyiLNANX9gEQaguLJ7ReF28gzzoOEkTCeGZTbrNCTl3h0gmZgbCSjLHWik8D2Gc94kyA/exec";
 
         let db = { matches: [], stats: [] };
         let currentSort = 'leetify';
+
+        function formatDate(dateInput) {
+            if (!dateInput) return "---";
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return dateInput.toString();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
 
         function getDecimal(val) {
             if (val === undefined || val === null) return 0;
@@ -101,18 +116,15 @@
             try {
                 const res = await fetch(API_URL);
                 const data = await res.json();
-                
-                // Apps Script vrací pole polí, odfiltrujeme hlavičky
                 db.matches = data.zapasy.filter(r => !isNaN(parseInt(r[0])));
                 db.stats = data.vykony.filter(r => !isNaN(parseInt(r[0])));
-                
                 document.getElementById('loading-area').style.display = 'none';
                 renderHome();
                 renderMatches();
                 updateRanking('leetify');
                 showSection('home');
             } catch (err) { 
-                document.getElementById('loading-area').innerText = "Chyba dat. Zkontroluj URL v Apps Scriptu."; 
+                document.getElementById('loading-area').innerText = "Chyba spojení. Data se nenačetla."; 
             }
         }
 
@@ -120,9 +132,9 @@
             const last3 = db.matches.slice(-3).reverse();
             document.getElementById('home-last-matches').innerHTML = last3.map(z => {
                 const win = parseInt(z[5]) > parseInt(z[6]);
-                return `<div onclick="showMatchDetail('${z[0]}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d] text-xs font-bold uppercase">
-                    <span class="w-1/4 text-gray-500 italic font-normal">${z[1]}</span>
-                    <span class="w-2/4 text-center"><span class="${win ? 'text-win' : 'text-loss'}">${z[3]}</span> <span class="mx-2 text-white">${z[5]}:${z[6]}</span> <span class="${!win ? 'text-win' : 'text-loss'}">${z[4]}</span></span>
+                return `<div onclick="showMatchDetail('${z[0]}')" class="card card-hover p-4 flex justify-between items-center text-xs font-bold uppercase">
+                    <span class="w-1/4 text-gray-500 italic font-normal">${formatDate(z[1])}</span>
+                    <span class="w-2/4 text-center"><span class="${win ? 'text-win' : 'text-loss'}">${z[3]}</span> <span class="mx-2 text-white text-base">${z[5]}:${z[6]}</span> <span class="${!win ? 'text-win' : 'text-loss'}">${z[4]}</span></span>
                     <span class="w-1/4 text-right text-gray-600 font-normal italic">${z[2]}</span>
                 </div>`;
             }).join('');
@@ -139,16 +151,14 @@
                     }
                 });
                 return { name, wr: (wins / ps.length) * 100, count: ps.length };
-            })
-            .filter(p => p.count >= 3)
-            .sort((a, b) => b.wr - a.wr).slice(0, 3);
+            }).filter(p => p.count >= 3).sort((a, b) => b.wr - a.wr).slice(0, 3);
 
             document.getElementById('home-top-winrate').innerHTML = winrates.length > 0 ? winrates.map((p, i) => `
                 <div onclick="showPlayerProfile('${p.name}')" class="flex justify-between items-center p-3 border-b border-gray-800/40 cursor-pointer hover:bg-white/5">
                     <span class="italic uppercase font-black ${i===0?'rank-1-name':(i===1?'rank-2-name':'rank-3-name')}">${i+1}. ${p.name}</span>
                     <span class="text-win font-black italic">${p.wr.toFixed(0)}% <span class="text-[10px] text-gray-600 font-normal">(${p.count} záp.)</span></span>
                 </div>
-            `).join('') : '<div class="text-gray-600 italic text-sm py-4 text-left">Zatím nikdo nemá odehrané 3 zápasy.</div>';
+            `).join('') : '<div class="text-gray-600 italic text-sm py-4 text-left">Zatím málo dat.</div>';
         }
 
         function handleSearch() {
@@ -164,8 +174,8 @@
             });
             document.getElementById('matches-list').innerHTML = filtered.slice().reverse().map(z => {
                 const win = parseInt(z[5]) > parseInt(z[6]);
-                return `<div onclick="showMatchDetail('${z[0]}')" class="card p-4 flex justify-between items-center cursor-pointer border-l-4 border-transparent hover:border-[#f8931d]">
-                    <span class="w-1/4 text-gray-500 text-[10px] font-bold italic">${z[1]}</span>
+                return `<div onclick="showMatchDetail('${z[0]}')" class="card card-hover p-4 flex justify-between items-center">
+                    <span class="w-1/4 text-gray-500 text-[10px] font-bold italic">${formatDate(z[1])}</span>
                     <span class="w-2/4 text-center text-white font-black italic uppercase"><span class="${win ? 'text-win' : 'text-loss'}">${z[3]}</span> <span class="mx-2 text-xl text-white">${z[5]}:${z[6]}</span> <span class="${!win ? 'text-win' : 'text-loss'}">${z[4]}</span></span>
                     <span class="w-1/4 text-right text-gray-600 text-[10px] uppercase font-bold tracking-widest">${z[2]}</span>
                 </div>`;
@@ -182,10 +192,25 @@
                 const ps = db.stats.filter(s => s[2]?.toString().trim() === name);
                 const k = ps.reduce((a, b) => a + getDecimal(b[3]), 0);
                 const d = ps.reduce((a, b) => a + getDecimal(b[4]), 0);
+                const totalAdr = ps.reduce((a, b) => a + getDecimal(b[5]), 0);
+                const leetifySum = ps.reduce((a, b) => a + getDecimal(b[7]), 0);
+                const hltvSum = ps.reduce((a, b) => a + getDecimal(b[6]), 0);
+                
+                let wins = 0;
+                ps.forEach(s => {
+                    const m = db.matches.find(mx => mx[0] == s[0]);
+                    if (m) {
+                        const isTeamA = s[1]?.toString().trim() === "Tým A";
+                        if ((isTeamA && parseInt(m[5]) > parseInt(m[6])) || (!isTeamA && parseInt(m[6]) > parseInt(m[5]))) wins++;
+                    }
+                });
+
                 return { 
                     name, 
-                    leetify: ps.reduce((a, b) => a + getDecimal(b[7]), 0) / ps.length, 
-                    hltv: ps.reduce((a, b) => a + getDecimal(b[6]), 0) / ps.length, 
+                    leetify: leetifySum / ps.length, 
+                    hltv: hltvSum / ps.length, 
+                    adr: totalAdr / ps.length,
+                    winrate: (wins / ps.length) * 100,
                     kd: d === 0 ? k : k / d 
                 };
             }).filter(p => p.name.toLowerCase().includes(query)).sort((a, b) => b[sortBy] - a[sortBy]);
@@ -193,10 +218,17 @@
             document.getElementById('ranking-table').innerHTML = data.map((p, i) => {
                 const pos = i + 1;
                 const mCl = pos === 1 ? 'rank-1-name' : (pos === 2 ? 'rank-2-name' : (pos === 3 ? 'rank-3-name' : 'text-white'));
-                let val = sortBy === 'leetify' ? `<span class="${getLeetifyColor(p.leetify)}">${p.leetify.toFixed(2)}</span>` : (sortBy === 'hltv' ? `<span class="${getHLTVColor(p.hltv)}">${p.hltv.toFixed(2)}</span>` : `<span class="${getKDColor(p.kd)}">${p.kd.toFixed(2)}</span>`);
+                
+                let displayVal = "";
+                if (sortBy === 'leetify') displayVal = `<span class="${getLeetifyColor(p.leetify)}">${p.leetify.toFixed(2)}</span>`;
+                else if (sortBy === 'hltv') displayVal = `<span class="${getHLTVColor(p.hltv)}">${p.hltv.toFixed(2)}</span>`;
+                else if (sortBy === 'kd') displayVal = `<span class="${getKDColor(p.kd)}">${p.kd.toFixed(2)}</span>`;
+                else if (sortBy === 'adr') displayVal = `<span class="text-white">${p.adr.toFixed(1)}</span>`;
+                else if (sortBy === 'winrate') displayVal = `<span class="text-win">${p.winrate.toFixed(0)}%</span>`;
+
                 return `<div onclick="showPlayerProfile('${p.name}')" class="flex justify-between items-center p-4 border-b border-gray-800/50 italic hover:bg-white/5 cursor-pointer">
                     <div class="flex items-center"><span class="mr-4 font-mono text-xs w-4 ${pos <= 3 ? mCl : 'text-gray-600'}">${pos}.</span><span class="font-bold uppercase ${mCl} ${pos <= 3 ? 'text-xl' : 'text-lg'}">${p.name}</span></div>
-                    <div class="text-2xl font-black italic">${val}</div>
+                    <div class="text-2xl font-black italic">${displayVal}</div>
                 </div>`;
             }).join('');
         }
@@ -210,22 +242,30 @@
                 const m = db.matches.find(mx => mx[0] == s[0]);
                 if (m && ((s[1]?.toString().trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.toString().trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5])))) wins++;
             });
+
             document.getElementById('profile-content').innerHTML = `
-                <button onclick="showSection('ranking')" class="text-gray-500 text-[10px] mb-6 uppercase font-bold hover:text-white transition tracking-widest">← Zpět</button>
+                <button onclick="showSection('ranking')" class="text-gray-500 text-[10px] mb-6 uppercase font-bold hover:text-white transition tracking-widest">← Zpět na žebříček</button>
                 <h2 class="text-5xl font-black italic uppercase mb-10 hltv-orange">${name}</h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">Zápasy</div><div class="text-3xl font-black italic">${ps.length}</div></div>
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">Winrate</div><div class="text-3xl font-black italic text-win">${(wins/ps.length*100).toFixed(0)}%</div></div>
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">K/D Ratio</div><div class="text-3xl font-black italic ${getKDColor(k/d)}">${(k/d).toFixed(2)}</div></div>
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">ADR</div><div class="text-3xl font-black italic text-white">${adr.toFixed(1)}</div></div>
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">HLTV</div><div class="text-3xl font-black italic ${getHLTVColor(hltv)}">${hltv.toFixed(2)}</div></div>
-                    <div class="stat-card"><div class="text-gray-500 text-[10px] uppercase font-bold">Leetify</div><div class="text-3xl font-black italic ${getLeetifyColor(leetify)}">${leetify.toFixed(2)}</div></div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12 text-center">
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">Zápasy</div><div class="text-2xl font-black italic">${ps.length}</div></div>
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">Winrate</div><div class="text-2xl font-black italic text-win">${(wins/ps.length*100).toFixed(0)}%</div></div>
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">K/D Ratio</div><div class="text-2xl font-black italic ${getKDColor(k/d)}">${(k/d).toFixed(2)}</div></div>
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">ADR</div><div class="text-2xl font-black italic text-white">${adr.toFixed(1)}</div></div>
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">HLTV</div><div class="text-2xl font-black italic ${getHLTVColor(hltv)}">${hltv.toFixed(2)}</div></div>
+                    <div class="stat-card"><div class="text-gray-500 text-[9px] uppercase font-bold">Leetify</div><div class="text-2xl font-black italic ${getLeetifyColor(leetify)}">${leetify.toFixed(2)}</div></div>
                 </div>
+                <h3 class="text-[10px] font-bold uppercase text-gray-500 mb-3 tracking-widest italic border-b border-gray-800 pb-1">Historie zápasů (klikni pro detail)</h3>
                 <div class="space-y-1">${ps.slice().reverse().map(s => {
                     const m = db.matches.find(mx => mx[0] == s[0]);
                     if(!m) return '';
                     const win = (s[1]?.toString().trim() === "Tým A" && parseInt(m[5]) > parseInt(m[6])) || (s[1]?.toString().trim() === "Tým B" && parseInt(m[6]) > parseInt(m[5]));
-                    return `<div class="card p-3 flex justify-between items-center text-xs"><span class="w-1/5 text-gray-600 font-mono">${m[1]}</span><span class="w-1/5 font-black italic ${win ? 'text-win' : 'text-loss'}">${win ? 'VÝHRA' : 'PROHRA'}</span><span class="w-1/5 text-center text-gray-400">K/D: <span class="text-white">${s[3]}/${s[4]}</span></span><span class="w-1/5 text-right ${getLeetifyColor(getDecimal(s[7]))}">LEETIFY: ${s[7]}</span><span class="w-1/5 text-right ${getHLTVColor(getDecimal(s[6]))}">HLTV: ${s[6]}</span></div>`;
+                    return `<div onclick="showMatchDetail('${m[0]}')" class="card card-hover p-3 flex justify-between items-center text-xs font-bold italic uppercase">
+                        <span class="w-1/5 text-gray-600 font-mono font-normal">${formatDate(m[1])}</span>
+                        <span class="w-1/5 ${win ? 'text-win' : 'text-loss'}">${win ? 'VÝHRA' : 'PROHRA'}</span>
+                        <span class="w-1/5 text-center text-gray-300 font-normal">K/D: ${s[3]}/${s[4]}</span>
+                        <span class="w-1/5 text-center text-gray-400 font-bold">${m[2]}</span>
+                        <span class="w-1/5 text-right ${getLeetifyColor(getDecimal(s[7]))}">L: ${s[7]}</span>
+                    </div>`;
                 }).join('')}</div>`;
             showSection('player-profile');
         }
@@ -241,8 +281,12 @@
                 </table></div>`;
             };
             document.getElementById('match-detail-content').innerHTML = `
-                <button onclick="showSection('matches')" class="text-gray-500 text-[10px] mb-6 uppercase font-bold hover:text-white transition">← Zpět</button>
-                <div class="text-center mb-10"><div class="text-5xl font-black italic uppercase text-white"><span class="${parseInt(m[5])>parseInt(m[6])?'text-win':'text-loss'}">${m[3]}</span> <span class="mx-4">${m[5]}:${m[6]}</span> <span class="${parseInt(m[6])>parseInt(m[5])?'text-win':'text-loss'}">${m[4]}</span></div></div>
+                <button onclick="showSection('matches')" class="text-gray-500 text-[10px] mb-6 uppercase font-bold hover:text-white transition">← Zpět na zápasy</button>
+                <div class="text-center mb-10"><div class="text-5xl font-black italic uppercase text-white">
+                    <span class="${parseInt(m[5])>parseInt(m[6])?'text-win':'text-loss'}">${m[3]}</span> 
+                    <span class="mx-4">${m[5]}:${m[6]}</span> 
+                    <span class="${parseInt(m[6])>parseInt(m[5])?'text-win':'text-loss'}">${m[4]}</span>
+                </div><div class="text-gray-600 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">${m[2]} | ${formatDate(m[1])}</div></div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">${table(m[3], 'text-win', "Tým A")}${table(m[4], 'text-loss', "Tým B")}</div>`;
             showSection('match-detail');
         }
@@ -255,7 +299,7 @@
             if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
             window.scrollTo(0,0);
         }
+
         init();
-    </script></body></html>
     </script></body></html>
 
